@@ -3,9 +3,9 @@ title: "HumanActivityRecognition"
 author: "Abiyu Giday"
 date: "November 22, 2015"
 output:
-  pdf_document:
-    toc: yes
   html_document:
+    toc: yes
+  pdf_document:
     toc: yes
   word_document: default
 ---

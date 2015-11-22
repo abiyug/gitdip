@@ -1,10 +1,4 @@
 base
-methods
-datasets
-utils
-grDevices
-graphics
-stats
 dplyr
 lattice
 ggplot2
@@ -12,10 +6,8 @@ caret
 randomForest
 rattle
 pROC
-grid
 partykit
 evtree
 foreach
 iterators
-parallel
 doMC

@@ -7,16 +7,23 @@ output:
     toc: yes
   html_document:
     toc: yes
+  word_document: default
 ---
 
 #Motivation:
 <img src="https://pupillageandhowtogetit.files.wordpress.com/2013/04/jsw_measuring_quality_764.jpg" align="right" width="35%" height="35%" />
 
-When it comes to sports exercise, quantifying repetition of a particular activity is easier than measuring quality or how well the an exercise is performed. Paying attention to both frequency and quality will result in optimal results.  However, measuring quality of physical activity is a subtle but important aspect that differs from one person to the other.  Here we will discuss how machine Machine Learning (ML) algorithm is utilized to recognize exercise patterns for six individuals in the experiment and accurately predict which person performed which 1 of 5  quality grade exercises.  On this case, after considering SVM and NNET algorithms,  a Random Forest (RF) algorithm resulted in 98% level of accuracy after it was trained with a Human Activity Recognition (HAR) dataset comes from [here.](http://groupware.les.inf.puc-rio.br/har)  Caret package’s ‘Train’ function was used to preprocess, train and tune the model for the human activity recognition dataset.  Principal Component Analysis (PCA) function was used to in the preprocessing stage to separate the signal from the noise and select optimal features based on finding new set of multivariate variables that represent as much of the variability.  PCA needed 25 features to capture 95% of the variance.  Because the dataset contains 19,622 observations and 160 features, a fairly large data size for personal computers, the ‘foreach’ and ‘doMC’ packages were used to configure 8 core processors to cut the amount of time it took to train the RF algorithm from 3+ hours to 10 minutes. 
+When it comes to sports exercise, quantifying repetition of a particular activity is easier than measuring quality or how well the an exercise is performed. Paying attention to both frequency and quality will result in optimal results.  However, measuring quality of physical activity is a subtle but important aspect that differs from one person to the other.  Here we will discuss how machine Machine Learning (ML) algorithm is utilized to recognize exercise patterns for six individuals in the experiment and accurately predict which person performed which 1 of 5  quality grade exercises.  On this case, after considering Support Vector Machine (SVM) and Neural Network (NNET) algorithms,  a Random Forest (RF) algorithm resulted in 98% level of accuracy after it was trained with a Human Activity Recognition (HAR) dataset comes from [here.](http://groupware.les.inf.puc-rio.br/har)  Caret package’s ‘Train’ function was used to preprocess, train and tune the model for the human activity recognition dataset.  Principal Component Analysis (PCA) function was used to in the preprocessing stage to separate the signal from the noise and select optimal features based on finding new set of multivariate variables that represent as much of the variability.  PCA needed 25 features to capture 95% of the variance.  Because the dataset contains 19,622 observations and 160 features, a fairly large data size for personal computers, the ‘foreach’ and ‘doMC’ packages were used to configure 8 core processors to cut the amount of time it took to train the RF algorithm from 3+ hours to 10 minutes. 
 
 
 #The Experiment:
-The HAR dataset was collected from researchers at XYZ.  To measure quality, they chose 6 individuals from the ages of 21-49 and have them lift a dumbbell in five qualitatively different manners. One of the repetition was performed accurately, rated A, the other four were variations of less than optimal way of performing the exercise (rated B-E).  Four sensors, similar to once found in smartphones, were strapped to each person, on the belt, bicep, arm and palms. This sensors then sent data while lifting the dumbbell. 
+Here is an excerpt from the paper written to describe the experiment:
+
+"_This human activity recognition research has traditionally focused on discriminating between different activities, i.e. to predict "which" activity was performed at a specific point in time (like with the Daily Living Activities dataset above). The approach we propose for the Weight Lifting Exercises dataset is to investigate "how (well)" an activity was performed by the wearer. The "how (well)" investigation has only received little attention so far, even though it potentially provides useful information for a large variety of applications,such as sports training._  
+
+_In this work (see the paper) we first define quality of execution and investigate three aspects that pertain to qualitative activity recognition: the problem of specifying correct execution, the automatic and robust detection of execution mistakes, and how to provide feedback on the quality of execution to the user. We tried out an on-body sensing approach (dataset here), but also an "ambient sensing approach" (by using Microsoft Kinect - dataset still unavailable)_
+
+_Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E)._"
 
 
 #Machine Learning Steps
@@ -158,7 +165,7 @@ featurePlot(x = df2[, c(8,10,20,45)],
 ```
 
 #Model Evaluation:
-To evaluate the models the **confustionMatrix** function on the valdation data that shows about 98% accuracy and 0.97% error rate. P value is also less also shows that is is my less than 2.2e-16 < 0.05. With the 95% confidence interval between (0.9719, 0.9806). Sensetivity and specificity for the model are in the ranges of 94-99% for all the qualities that are predicted by the moedl. The Kappy value is also at 97% which are all lead to a very high accuracy predition. 
+To evaluate the models the **confustionMatrix** function on the valdation data is used as shown below. And it shows about 98% accuracy and 0.97% error rate. P value is  2.2e-16 < 0.05 which is acceptable significant. With the 95% confidence interval within the range of (0.9719, 0.9806). Sensetivity and specificity for the model are in the ranges of 94-99% for all 5 qualities (A-E) that are predicted by the moedl. The Kappy value is  97%, combined with all the other indicators, lead to a very high accuracy predition. 
 ```{r modeval,eval=TRUE, echo=TRUE }
 modFit1$finalModel
 confusionMatrix(valdt22$classe,predict(modFit1,valdt22))
@@ -181,6 +188,8 @@ The objective of this excise had been to create a model that will accurately rec
 #Reference
 
 _Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements Read more: http://groupware.les.inf.puc-rio.br/har#ixzz3sEPIq2gc_
+
+_Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013. Read more: http://groupware.les.inf.puc-rio.br/har#wle_paper_section#ixzz3sGJpMNZm_
 
 _Max Kuhn. PhD Pfizer Global R&D, http://topepo.github.io/caret/index.html_
 

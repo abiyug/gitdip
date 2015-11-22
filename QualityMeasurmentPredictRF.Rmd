@@ -1,0 +1,192 @@
+---
+title: "HumanActivityRecognition"
+author: "Abiyu Giday"
+date: "November 22, 2015"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+#Motivation:
+<img src="https://pupillageandhowtogetit.files.wordpress.com/2013/04/jsw_measuring_quality_764.jpg" align="right" width="35%" height="35%" />
+
+When it comes to sports exercise, quantifying repetition of a particular activity is easier than measuring quality or how well the an exercise is performed. Paying attention to both frequency and quality will result in optimal results.  However, measuring quality of physical activity is a subtle but important aspect that differs from one person to the other.  Here we will discuss how machine Machine Learning (ML) algorithm is utilized to recognize exercise patterns for six individuals in the experiment and accurately predict which person performed which 1 of 5  quality grade exercises.  On this case, after considering SVM and NNET algorithms,  a Random Forest (RF) algorithm resulted in 98% level of accuracy after it was trained with a Human Activity Recognition (HAR) dataset comes from [here.](http://groupware.les.inf.puc-rio.br/har)  Caret package’s ‘Train’ function was used to preprocess, train and tune the model for the human activity recognition dataset.  Principal Component Analysis (PCA) function was used to in the preprocessing stage to separate the signal from the noise and select optimal features based on finding new set of multivariate variables that represent as much of the variability.  PCA needed 25 features to capture 95% of the variance.  Because the dataset contains 19,622 observations and 160 features, a fairly large data size for personal computers, the ‘foreach’ and ‘doMC’ packages were used to configure 8 core processors to cut the amount of time it took to train the RF algorithm from 3+ hours to 10 minutes. 
+
+
+#The Experiment:
+The HAR dataset was collected from researchers at XYZ.  To measure quality, they chose 6 individuals from the ages of 21-49 and have them lift a dumbbell in five qualitatively different manners. One of the repetition was performed accurately, rated A, the other four were variations of less than optimal way of performing the exercise (rated B-E).  Four sensors, similar to once found in smartphones, were strapped to each person, on the belt, bicep, arm and palms. This sensors then sent data while lifting the dumbbell. 
+
+
+#Machine Learning Steps
+The following steps detail the data collection and exploration steps, followed by how  parallel computing was configured and used to minimize the amount to time it took to process the data. We then discuss the steps to train, tune  and evaluate the data.
+
+##Data Collection:
+Here are all of 160 features in the original data set. There are two downloads. One for the training datd and the other os the test data.
+```{r SetEnv, eval=TRUE, echo=TRUE, cache = TRUE}
+setwd("~/Documents/Data-Science/DataScienceSpecialization/MachineLearning/Project1")
+#rm(list=ls()) 
+#load relevant libraryies
+library(dplyr)
+library(caret)
+library(randomForest)
+library(rattle)
+library(pROC)
+library(evtree)
+library(foreach)
+library(doMC)
+registerDoMC(cores = 8)
+
+
+#Download training data 
+if(!file.exists("./data")){dir.create("./data")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(fileUrl, destfile = "./data/pml-training.csv", method = "curl")
+
+trainData <- read.csv("./data/pml-training.csv")
+
+#Structure of the dataset
+#str(trainData)
+names(trainData)
+
+#Download test data 
+if(!file.exists("./data")){dir.create("./data")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(fileUrl, destfile = "./data/pml-testing.csv", method = "curl")
+
+testData <- read.csv("./data/pml-testing.csv")
+
+```
+
+##Data Exploration:
+In the following syrps we will tidy the data with dplyr package. Variables not used as measurment and contain only missing values are removed resulting in just 53 features.
+```{r dataexplor,eval=TRUE, echo=TRUE }
+#Remove variables that contain only NA
+library(dplyr)
+df1 <- trainData
+df2 <- df1 %>% select(-matches("^kurtosis|^skewness|^max|^min|^amplitude|^var|^stddev|^avg"))
+
+#Remove variables that do not measure performance & reorder data table with classe feature appearing on column 1
+df3 <- df2[,-c(1:7)] 
+df3 <- df3[, c(53,1:52)]  
+
+# Structur of the new dataset
+str(df3)
+
+#Verify if missing values are in the dataset
+sum(is.na(df2))
+```
+
+
+##Parallel Computing:
+Here we set the number of cores for parallel computing to 8. This is enabled with the 'doMC' packages. Being able to parallely train the data cut the amount of time by about 90%.  
+```{r parallel,eval=TRUE, echo=TRUE}
+#Register the number of cores to be used.
+library(doMC)
+registerDoMC(cores = 8)
+
+```
+
+##Spliting the data into training and validation:
+The training data is split using the createDataParition function from the caret package. The split was 75/25. 75% is for training the data and the 25% is used to validate the trained model.   
+```{r split,eval=TRUE, echo=TRUE }
+library(caret)
+#Split the training data into training and validation
+set.seed(1582)
+inTrain <- createDataPartition(y = df3$classe, p = 0.75, list = FALSE)
+train22 <- df3[inTrain,]
+valdt22 <- df3[-inTrain,]
+
+#check if missing value exist
+dim(train22)
+sum(is.na(train22))
+dim(valdt22)
+sum(is.na(valdt22))
+
+#PreProcessing
+```
+
+##Tuning and training the Model
+Because it takes long time to train the data when  number of folds or number of resampling iteration is set to 10. On this case we left it to a default.  In the training data Random Forest (rf) is used as method, and Principal Component Analysis (PCA) is turned on for preprocessing, centering and scaling of the data is also excplicityly set. The system.time function is also used to time how long it takes to process the data.   
+```{r train,eval=TRUE, echo=TRUE, cache = TRUE}
+
+fitControl <- trainControl( 
+        method = "repeatedcv",
+        #number = 10,
+        #repeats = 10,
+        allowParallel = TRUE)
+
+set.seed(222)
+system.time(modFit1 <- train(classe ~.,
+                             data = train22,
+                             method = "rf",
+                             preProcess=c("pca","center","scale"),
+                             trControl=fitControl))
+
+```
+###Plots for the model
+The following set of plots show Model vs Accuracy, the Accuracy and kappa no0rmal curves. And the 
+```{r modelplot,eval=TRUE, echo=FALSE }
+plot(modFit1)
+resampleHist(modFit1) #
+```
+
+###Variable Importance
+Of the 53 variables used in the training data, preprocessing with PCA identfied **25 predictors that can explain 95%** of the variance. 
+
+```{r varimp,eval=TRUE, echo=FALSE }
+modFit1$preProcess
+varImp(modFit1)
+```
+
+####Variable importance plot
+```{r varplot, eval=TRUE, echo=FALSE, fig.width = 8, fig.height = 4, fig.align='center',fig.cap = "Var Importance Plot" }
+plot(varImp(modFit1))
+```
+
+####Scatter plot of selected important variables 
+
+The scatter plot uses the top 4 variables and their relations to each person that participated in the experiment. 
+```{r matrixplt, fig.margin = TRUE, fig.width = 8, fig.height = 8, fig.align='center',fig.cap = "Scatterplot Matrix with Ellipses"}
+# Scatterplot Matrix with Ellipses
+featurePlot(x = df2[, c(8,10,20,45)],
+            y = df2$user_name,
+            plot = "ellipse",
+            ## Add a key at the top
+            auto.key = list(columns = 3))
+```
+
+#Model Evaluation:
+To evaluate the models the **confustionMatrix** function on the valdation data that shows about 98% accuracy and 0.97% error rate. P value is also less also shows that is is my less than 2.2e-16 < 0.05. With the 95% confidence interval between (0.9719, 0.9806). Sensetivity and specificity for the model are in the ranges of 94-99% for all the qualities that are predicted by the moedl. The Kappy value is also at 97% which are all lead to a very high accuracy predition. 
+```{r modeval,eval=TRUE, echo=TRUE }
+modFit1$finalModel
+confusionMatrix(valdt22$classe,predict(modFit1,valdt22))
+
+# area under the ROC curve for each predictor 
+RocImportance <- filterVarImp(x=train22[,-ncol(train22)], y = train22$classe)
+head(RocImportance)
+plot(RocImportance)
+
+
+#Testing the model against the testData
+data.frame(TestData = testData$user_name, Predicted = predict(modFit1, testData))
+
+```
+
+#Take Away:
+The objective of this excise had been to create a model that will accurately recognize patterns and predict the manner (quality) in which the participants of the experiment exercised from the collected dataset.  Utilizing the Random Forest algorithm, a model was generated with Caret packages trControl function, and preprocessed with PCA that select optimal number of high valued variables. Although the the accu resulted in 99.25% pattern recognition and prediction accuracy.  
+
+
+#Reference
+
+_Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements Read more: http://groupware.les.inf.puc-rio.br/har#ixzz3sEPIq2gc_
+
+_Max Kuhn. PhD Pfizer Global R&D, http://topepo.github.io/caret/index.html_
+
+_Jeff Leek, PhD - Practical Machine Learning lectures. https://www.coursera.org/course/predmachlearn_  
+
+_Wikepedia: https://en.wikipedia.org/wiki/Machine_learning_
+
+_StackOverflow: http://stackoverflow.com/_
+

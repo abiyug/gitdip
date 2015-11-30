@@ -1,11 +1,12 @@
 ---
-title: "HumanActivityRecognition"
+title: Human Activity Pattern Recognition and Quality prediction with Random Forest
+  Algorithm
 author: "Abiyu Giday"
 date: "November 22, 2015"
 output:
-  html_document:
-    toc: yes
   pdf_document:
+    toc: yes
+  html_document:
     toc: yes
   word_document: default
 ---
@@ -13,7 +14,9 @@ output:
 #Motivation:
 <img src="https://pupillageandhowtogetit.files.wordpress.com/2013/04/jsw_measuring_quality_764.jpg" align="right" width="35%" height="35%" />
 
-When it comes to sports exercise, quantifying repetition of a particular activity is easier than measuring quality or how well the an exercise is performed. Paying attention to both frequency and quality will result in optimal results.  However, measuring quality of physical activity is a subtle but important aspect that differs from one person to the other.  Here we will discuss how machine Machine Learning (ML) algorithm is utilized to recognize exercise patterns for six individuals in the experiment and accurately predict which person performed which 1 of 5  quality grade exercises.  On this case, after considering Support Vector Machine (SVM) and Neural Network (NNET) algorithms,  a Random Forest (RF) algorithm resulted in 98% level of accuracy after it was trained with a Human Activity Recognition (HAR) dataset comes from [here.](http://groupware.les.inf.puc-rio.br/har)  Caret package’s ‘Train’ function was used to preprocess, train and tune the model for the human activity recognition dataset.  Principal Component Analysis (PCA) function was used to in the preprocessing stage to separate the signal from the noise and select optimal features based on finding new set of multivariate variables that represent as much of the variability.  PCA needed 25 features to capture 95% of the variance.  Because the dataset contains 19,622 observations and 160 features, a fairly large data size for personal computers, the ‘foreach’ and ‘doMC’ packages were used to configure 8 core processors to cut the amount of time it took to train the RF algorithm from 3+ hours to 10 minutes. 
+When it comes to human physical activity, quantifying repetition of a particular exercise is easier than measuring quality or how well the exercise is performed. Paying attention to both frequency and quality will result in optimal outcome.  However, measuring quality of physical activity is a subtle but important aspect that differs from one individual to the other.  Here we will discuss how Machine Learning (ML) algorithm model is utilized to recognize exercise patterns and predict the quality in which the exercise is performed.  The preclassified training dataset is used to generate a machine learning  model.  The dataset contains data on six volunteers that performed a dumbbell weight lifting exercise with 5 levels of quality ranges (labled A-E in the trianing data set - not labled on test dataset).  The specifics of the exercise is detailed in the next section labled 'The Experiment'.  Few ML algorithms were considered before selecting the Random Forest (RF) algorithm which resulted in 98% level of accuracy. 
+
+[CaretPackage](http://topepo.github.io/caret/index.html) is used, to preprocess, train and tune the model on the human [activity recognition dataset](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv).  Principal Component Analysis (PCA) function was used in the preprocessing stage to separate the signal from the noise and select optimal features based on finding new set of multivariate variables that represent as much of the variability.  As we will see, PCA needed 25 features (out of 53) to capture 95% of the variance.  Because the row dataset contains 19,622 observations and 160 features, a fairly large data size for personal computers single core processor, the [‘doMC’ package](https://cran.r-project.org/web/packages/doMC/doMC.pdf) was used to make 8 core processors available to digest the data in parallel, cutting down the amount of time it took to train the Random Forest algorithm from 3+ hours to less than 10 minutes. 
 
 
 #The Experiment:
@@ -27,11 +30,11 @@ _Six young health participants were asked to perform one set of 10 repetitions o
 
 
 #Machine Learning Steps
-The following steps detail the data collection and exploration steps, followed by how  parallel computing was configured and used to minimize the amount to time it took to process the data. We then discuss the steps to train, tune  and evaluate the data.
+The following steps detail the data collection and exploration, followed by how  parallel computing and how it was configured and used to minimize the amount to time it took to process the dataset. We then discuss the steps to train, tune  and evaluate the dataset.
 
 ##Data Collection:
-Here are all of 160 features in the original data set. There are two downloads. One for the training datd and the other os the test data.
-```{r SetEnv, eval=TRUE, echo=TRUE, cache = TRUE}
+The data was collected and made avilable.  Here we first load the reqruied libraries to process the data and download the dataset for training and testing from . There are two datasets. One for [training](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) the the other for [testing](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv). are all of 160 features in the original data set.  
+```{r SetEnv, eval=TRUE, echo=TRUE, message=FALSE, cache = TRUE}
 setwd("~/Documents/Data-Science/DataScienceSpecialization/MachineLearning/Project1")
 #rm(list=ls()) 
 #load relevant libraryies
@@ -40,7 +43,7 @@ library(caret)
 library(randomForest)
 library(rattle)
 library(pROC)
-library(evtree)
+#library(evtree)
 library(foreach)
 library(doMC)
 registerDoMC(cores = 8)
@@ -55,7 +58,7 @@ trainData <- read.csv("./data/pml-training.csv")
 
 #Structure of the dataset
 #str(trainData)
-names(trainData)
+#names(trainData)
 
 #Download test data 
 if(!file.exists("./data")){dir.create("./data")}
@@ -66,9 +69,13 @@ testData <- read.csv("./data/pml-testing.csv")
 
 ```
 
+Here are all of the features in the dataset. Notice the quality measurment for each person is listed in the _classe_ feature of the training dataset. 
+```{r features, eval=TRUE, echo=TRUE, message=FALSE, cache = TRUE}
+names(trainData)
+```
 ##Data Exploration:
-In the following syrps we will tidy the data with dplyr package. Variables not used as measurment and contain only missing values are removed resulting in just 53 features.
-```{r dataexplor,eval=TRUE, echo=TRUE }
+In the following steps we will tidy the data with dplyr package. Variables not used as measurment and contain only missing values are removed resulting in just 53 features out of 160.
+```{r dataexplor,eval=TRUE, message=FALSE, echo=TRUE }
 #Remove variables that contain only NA
 library(dplyr)
 df1 <- trainData
@@ -85,10 +92,9 @@ str(df3)
 sum(is.na(df2))
 ```
 
-
 ##Parallel Computing:
-Here we set the number of cores for parallel computing to 8. This is enabled with the 'doMC' packages. Being able to parallely train the data cut the amount of time by about 90%.  
-```{r parallel,eval=TRUE, echo=TRUE}
+Here we set the number of cores for parallel computing to 8. This is enabled with the 'doMC' packages and setting the cores to 8( eight because the mahcine used have 8 cores available to it.) . Being able to parallely train the data cut the amount of time significantly.  
+```{r parallel,eval=TRUE, message=FALSE, echo=TRUE}
 #Register the number of cores to be used.
 library(doMC)
 registerDoMC(cores = 8)
@@ -96,7 +102,7 @@ registerDoMC(cores = 8)
 ```
 
 ##Spliting the data into training and validation:
-The training data is split using the createDataParition function from the caret package. The split was 75/25. 75% is for training the data and the 25% is used to validate the trained model.   
+The training data is split using the createDataParition function from the caret package. The split was 75/25. 75% is set aside to train the model,  and 25% was set aside to validate the trained model.   
 ```{r split,eval=TRUE, echo=TRUE }
 library(caret)
 #Split the training data into training and validation
@@ -115,7 +121,7 @@ sum(is.na(valdt22))
 ```
 
 ##Tuning and training the Model
-Because it takes long time to train the data when  number of folds or number of resampling iteration is set to 10. On this case we left it to a default.  In the training data Random Forest (rf) is used as method, and Principal Component Analysis (PCA) is turned on for preprocessing, centering and scaling of the data is also excplicityly set. The system.time function is also used to time how long it takes to process the data.   
+On personal computer's (PC), it takes fairly long time to train the data with 20 thousand observation, especially when  number of folds or number of resampling iteration is set to higher number. On this case number of resmpling is left to a default (10 repeat is commented out in the configuration because even with 8 cores, 10 repetion took over three hours to process).  To train the model, Random Forest (rf) machine learning algorithm is used, and Principal Component Analysis (PCA) is turned on for preprocessing, centering and scaling of the data is also excplicityly set to scale and center the data during preprocessing stage. The _system.time_ function is configured to measure the proceesing duration.
 ```{r train,eval=TRUE, echo=TRUE, cache = TRUE}
 
 fitControl <- trainControl( 
@@ -133,22 +139,22 @@ system.time(modFit1 <- train(classe ~.,
 
 ```
 ###Plots for the model
-The following set of plots show Model vs Accuracy, the Accuracy and kappa no0rmal curves. And the 
-```{r modelplot,eval=TRUE, echo=FALSE }
+The following set of plots show Model vs Accuracy and Accuracy and kappa normal curves respectively.
+```{r modelplot,eval=TRUE, echo=TRUE }
 plot(modFit1)
 resampleHist(modFit1) #
 ```
 
 ###Variable Importance
-Of the 53 variables used in the training data, preprocessing with PCA identfied **25 predictors that can explain 95%** of the variance. 
+Of the 53 variables used in the training data, preprocessing with PCA identfied **25 predictors that can explain 95%** of the variance.  The follwoing steps reveal important features. 
 
-```{r varimp,eval=TRUE, echo=FALSE }
+```{r varimp,eval=TRUE, echo=TRUE }
 modFit1$preProcess
 varImp(modFit1)
 ```
 
 ####Variable importance plot
-```{r varplot, eval=TRUE, echo=FALSE, fig.width = 8, fig.height = 4, fig.align='center',fig.cap = "Var Importance Plot" }
+```{r varplot, eval=TRUE, echo=TRUE, fig.width = 8, fig.height = 4, fig.align='center',fig.cap = "Var Importance Plot" }
 plot(varImp(modFit1))
 ```
 
@@ -165,7 +171,7 @@ featurePlot(x = df2[, c(8,10,20,45)],
 ```
 
 #Model Evaluation:
-To evaluate the models the **confustionMatrix** function on the valdation data is used as shown below. And it shows about 98% accuracy and 0.97% error rate. P value is  2.2e-16 < 0.05 which is acceptable significant. With the 95% confidence interval within the range of (0.9719, 0.9806). Sensetivity and specificity for the model are in the ranges of 94-99% for all 5 qualities (A-E) that are predicted by the moedl. The Kappy value is  97%, combined with all the other indicators, lead to a very high accuracy predition. 
+To evaluate the models the _confustionMatrix_ function is used on the valdation dataset. And it shows about 98% accuracy and 0.97% error rate. P value is  2.2e-16 < 0.05 which is acceptable significant. With the 95% confidence interval within the range of (0.9719, 0.9806). Sensetivity and specificity for the model are in the ranges of 94-99% for all 5 qualities (A-E) that are predicted by the moedl. The Kappy value is  97%, combined with all the other indicators, lead to a very high accuracy predition. 
 ```{r modeval,eval=TRUE, echo=TRUE }
 modFit1$finalModel
 confusionMatrix(valdt22$classe,predict(modFit1,valdt22))
@@ -182,7 +188,8 @@ data.frame(TestData = testData$user_name, Predicted = predict(modFit1, testData)
 ```
 
 #Take Away:
-The objective of this excise had been to create a model that will accurately recognize patterns and predict the manner (quality) in which the participants of the experiment exercised from the collected dataset.  Utilizing the Random Forest algorithm, a model was generated with Caret packages trControl function, and preprocessed with PCA that select optimal number of high valued variables. Although the the accu resulted in 99.25% pattern recognition and prediction accuracy.  
+The objective of this exercise had been to create a model that will accurately recognize patterns and predict the manner (quality) in which the participants of the experiment exercised from the collected dataset.  Utilizing the Random Forest algorithm, a model was generated with Caret packages function, and preprocessed with PCA to select optimal number of high valued variables resulting in a a very high level of  pattern recognition and accuracy.
+
 
 
 #Reference
@@ -198,4 +205,5 @@ _Jeff Leek, PhD - Practical Machine Learning lectures. https://www.coursera.org/
 _Wikepedia: https://en.wikipedia.org/wiki/Machine_learning_
 
 _StackOverflow: http://stackoverflow.com/_
+
 
